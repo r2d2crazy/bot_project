@@ -1,0 +1,293 @@
+bot_token = '5140696171:AAG5yamZcGYKBnN-0Pk_Mq6Dclpf-LGQhQs'
+from telegram import ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
+from PIL import Image, ImageFont, ImageDraw
+
+bot = Bot(token=bot_token)
+updater = Updater(token=bot_token)
+dispatcher = updater.dispatcher
+FIRST = 0
+SECOND = 1
+THIRD = 2
+FOURTH = 3
+FIFTH = 4
+SIX = 5
+F = 1
+S = 2
+T = 3
+H = 4
+
+colors = {'WHITE': (255, 255, 255),
+          'BLACK': (0, 0, 0)}
+
+def get_data_from_file(day):
+    f = open(day, "r", encoding='utf-8')
+    data = f.read()
+    f.close()
+    return data
+def help(update, context):
+    context.bot.send_message(update.effective_chat.id, get_data_from_file('help.txt'))
+def write(update, context):
+    update.message.reply_text('Привет! Скинь фоточку для мема')
+    return FIRST
+
+
+def get_photo(update, context):
+    photo_file = update.message.document.get_file()
+    photo_file.download(str(update.message.from_user['id']) + '.png')
+    update.message.reply_text('Фотка получена, давай теперь размер шрифта')
+    return SECOND
+
+
+def get_size(update, context):
+    global size
+    size = str(update.message.text)
+    reply_keyboard = [['WHITE', 'BLACK']]
+    update.message.reply_text('А теперь какой цвет',
+                              reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    return THIRD
+
+
+def get_color(update, context):
+    global color
+    color = update.message.text
+    update.message.reply_text('Где текст будет находиться по горизонтали?')
+    return FOURTH
+
+
+def xc(update, context):
+    global x
+    x = int(update.message.text)
+    update.message.reply_text('Где текст будет находится по вертикали?')
+    return FIFTH
+
+
+def yc(update, context):
+    global y
+    y = int(update.message.text)
+    update.message.reply_text('Какой будет текст?')
+    return SIX
+
+
+def get_text(update, context):
+    text = update.message.text
+    img = Image.open(str(update.message.from_user['id']) + '.png')
+    rgb_img = img.convert('RGB')
+    title_font = ImageFont.truetype('arial.ttf', int(size))
+    meme = ImageDraw.Draw(rgb_img)
+    meme.text((x, y), text, colors[color], font=title_font)
+    name = str(update.message.from_user['id']) + '_meme.png'
+    rgb_img.save(name)
+    sending_img = open(name, 'rb')
+    context.bot.send_document(update.effective_chat.id, sending_img)
+    return ConversationHandler.END
+
+
+start_handler = CommandHandler('write', write)
+get_photo_handler = MessageHandler(Filters.document.category('image'), get_photo)
+get_sizeh = MessageHandler(Filters.text, get_size)
+get_colorh = MessageHandler(Filters.text, get_color)
+get_text_handler = MessageHandler(Filters.text, get_text)
+xch = MessageHandler(Filters.text, xc)
+ych = MessageHandler(Filters.text, yc)
+hepph=CommandHandler('help',help)
+dispatcher.add_handler(hepph)
+
+conv_handler = ConversationHandler(
+    entry_points=[start_handler],
+    states={
+        FIRST: [get_photo_handler],
+        SECOND: [get_sizeh],
+        THIRD: [get_colorh],
+        FOURTH: [xch],
+        FIFTH: [ych],
+        SIX: [get_text_handler],
+    }, fallbacks=[]
+)
+
+dispatcher.add_handler(conv_handler)
+
+
+# RESIZE---------------------------------------------------------------------------------
+def resizeph(update, context):
+    update.message.reply_text('Пришли фотку')
+    return F
+
+
+def photo(update, context):
+    img = update.message.document.get_file()
+    img.download(str(update.message.from_user['id']) + '.png')
+    update.message.reply_text('Какая ширина будет у фотки?')
+    return S
+
+
+def wc(update, context):
+    global wc
+    wc = int(update.message.text)
+    update.message.reply_text('Какая высота будет у фотки?')
+    return T
+
+
+def resizep(update, context):
+    global hc
+    hc = int(update.message.text)
+    img = Image.open(str(update.message.from_user['id']) + '.png')
+    imgrgb = img.convert('RGB')
+    result = imgrgb.resize((wc, hc))
+    name = str(update.message.from_user['id']) + '_resized.png'
+    result.save(name)
+    sending_img = open(name, 'rb')
+    context.bot.send_document(update.effective_chat.id, sending_img)
+
+    return ConversationHandler.END
+
+
+rh = CommandHandler('resize', resizeph)
+phh = MessageHandler(Filters.document.category('image'), photo)
+wch = MessageHandler(Filters.text, wc)
+reh = MessageHandler(Filters.text, resizep)
+conv_h = ConversationHandler(
+    entry_points=[rh],
+    states={
+        F: [phh],
+        S: [wch],
+        T: [reh],
+    }, fallbacks=[]
+)
+
+dispatcher.add_handler(conv_h)
+
+# CROP---------------------------
+A = 1
+B = 2
+C = 3
+D = 4
+E = 5
+
+
+def cropp(update, context):
+    update.message.reply_text('Скинь фотку')
+    return A
+
+
+def po(update, context):
+    img = update.message.document.get_file()
+    img.download(str(update.message.from_user['id']) + '.png')
+    update.message.reply_text('Какая первая точка по иксу?')
+    return B
+
+
+def xx1(update, context):
+    global xx1
+    xx1 = int(update.message.text)
+    update.message.reply_text('Какая первая точка по игрику?')
+    return C
+
+
+def xx2(update, context):
+    global xx2
+    xx2 = int(update.message.text)
+    update.message.reply_text('Какая вторая точка по иксу?')
+    return D
+
+
+def yy1(update, context):
+    global yy1
+    yy1 = int(update.message.text)
+    update.message.reply_text('Какая вторая точка по игрику?')
+    return E
+
+
+def ccropp(update, context):
+    global yy2
+    yy2 = int(update.message.text)
+    img = Image.open(str(update.message.from_user['id']) + '.png')
+    imgrgb = img.convert('RGB')
+    result = imgrgb.crop((xx1, xx2, yy1, yy2))
+    name = str(update.message.from_user['id']) + '_cropped.png'
+    result.save(name)
+    sending_img = open(name, 'rb')
+    context.bot.send_document(update.effective_chat.id, sending_img)
+    return ConversationHandler.END
+
+
+cropp_h = CommandHandler('crop', cropp)
+po_h = MessageHandler(Filters.document.category('image'), po)
+xx1_h = MessageHandler(Filters.text, xx1)
+xx2_h = MessageHandler(Filters.text, xx2)
+yy1_h = MessageHandler(Filters.text, yy1)
+ccropp_h = MessageHandler(Filters.text, ccropp)
+conver_h = ConversationHandler(
+    entry_points=[cropp_h],
+    states={
+        A: [po_h],
+        B: [xx1_h],
+        C: [xx2_h],
+        D: [yy1_h],
+        E: [ccropp_h],
+    }, fallbacks=[]
+)
+dispatcher.add_handler(conver_h)
+Z=1
+def negative(update,context):
+    update.message.reply_text('Скинь фотку')
+    return Z
+def neg(update,context):
+    img=update.message.document.get_file()
+    img.download(str(update.message.from_user['id']) + '.png')
+    im=Image.open(str(update.message.from_user['id']) + '.png')
+    imgrgb = im.convert('RGB')
+    width, height = imgrgb.size
+
+    for i in range(width):
+        for j in range(height):
+            r, g, b = imgrgb.getpixel((i, j))
+            imgrgb.putpixel((i, j), (255 - r, 255 - g, 255 - b))
+    name=str(update.message.from_user['id']) + '_negatived.png'
+    imgrgb.save(name)
+    sending_img = open(name, 'rb')
+    context.bot.send_document(update.effective_chat.id, sending_img)
+    return ConversationHandler.END
+negath=CommandHandler('negative', negative)
+neghah=MessageHandler(Filters.document.category('image'), neg)
+conversationhandler=ConversationHandler(
+    entry_points=[negath],
+    states={
+        Z:[neghah],
+        },fallbacks=[]
+
+
+)
+dispatcher.add_handler(conversationhandler)
+X=1
+def blackwhite(update,context):
+    update.message.reply_text('Скинь фотку')
+    return X
+def black(update,context):
+    img=update.message.document.get_file()
+    img.download(str(update.message.from_user['id']) + '.png')
+    im=Image.open(str(update.message.from_user['id']) + '.png')
+    imgrgb = im.convert('RGB')
+    width, height = imgrgb.size
+
+    for i in range(width):
+        for j in range(height):
+            r, g, b = imgrgb.getpixel((i, j))
+            imgrgb.putpixel((i, j), (
+            int(r * 0.212) + int(g * 0.715) + int(b * 0.0746), int(r * 0.212) + int(g * 0.715) + int(b * 0.0746),
+            int(r * 0.212) + int(g * 0.715) + int(b * 0.0746)))
+    name=str(update.message.from_user['id']) + '_blackwhited.png'
+    imgrgb.save(name)
+    sending_img = open(name, 'rb')
+    context.bot.send_document(update.effective_chat.id, sending_img)
+    return ConversationHandler.END
+blackwhiteh=CommandHandler('blackwhite', blackwhite)
+blackhah=MessageHandler(Filters.document.category('image'), black)
+conversation_handler=ConversationHandler(entry_points=[blackwhiteh],
+    states={
+        X:[blackhah],
+        },fallbacks=[]
+    )
+dispatcher.add_handler(conversation_handler)
+updater.start_polling()
+updater.idle()
